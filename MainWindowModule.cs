@@ -156,7 +156,7 @@ namespace roguishpanda.AB_Bauble_Farm
         public SettingEntry<string> _PackageSettingEntry;
         public string _CurrentPackage;
         public readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
-        {
+        { 
             WriteIndented = true // Makes JSON human-readable
         };
 
