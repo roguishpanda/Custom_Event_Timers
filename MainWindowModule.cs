@@ -1142,7 +1142,6 @@ namespace roguishpanda.AB_Bauble_Farm
 
             #endregion
 
-
             try
             {
                 #region Timer Window
@@ -1153,18 +1152,17 @@ namespace roguishpanda.AB_Bauble_Farm
                 AsyncTexture2D NoTexture = new AsyncTexture2D();
                 _TimerWindow = new StandardWindow(
                     NoTexture,
-                    new Rectangle(0, 0, 390, 470), // The windowRegion
-                    new Rectangle(0, -10, 390, 470)) // The contentRegion
+                    new Rectangle(0, 0, 340, 220), // The windowRegion
+                    new Rectangle(0, -10, 340, 220)) // The contentRegion
                 {
                     Parent = GameService.Graphics.SpriteScreen,
                     Title = "", //Timers
                     SavesPosition = true,
-                    SavesSize = true,
+                    //SavesSize = true,
                     CanResize = true,
                     Id = $"{nameof(MainWindowModule)}_TimerWindow_38d37290-b5f9-447d-97ea-45b0b50e5f56",
                 };
                 _TimerWindow.Resized += _TimerWindow_Resized;
-                /// Create texture panel for timer window
                 _timerBackgroundPanel = new Blish_HUD.Controls.Panel
                 {
                     Parent = _TimerWindow, // Set the panel's parent to the StandardWindow
@@ -1186,12 +1184,13 @@ namespace roguishpanda.AB_Bauble_Farm
                 #region Static Window
                 _StaticWindow = new StandardWindow(
                     NoTexture,
-                    new Rectangle(0, 0, 340, 280), // The windowRegion
-                    new Rectangle(0, -10, 340, 280)) // The contentRegion
+                    new Rectangle(0, 0, 340, 220), // The windowRegion
+                    new Rectangle(0, -10, 340, 220)) // The contentRegion
                 {
                     Parent = GameService.Graphics.SpriteScreen,
                     Title = "",
                     SavesPosition = true,
+                    //SavesSize = true,
                     CanResize = true,
                     Id = $"{nameof(MainWindowModule)}_StaticWindow_38d37290-b5f9-447d-97ea-45b0b50e5f56",
                 };
