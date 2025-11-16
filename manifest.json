@@ -1,6 +1,6 @@
 {
   "name": "Custom Timers & Events",
-  "version": "0.0.11",
+  "version": "1.0.0",
   "namespace": "roguishpanda.AB_Bauble_Farm",
   "package": "Custom_Event_Timers.dll",
   "manifest_version": 1,
