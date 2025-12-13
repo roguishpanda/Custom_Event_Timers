@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Runtime;
 using System.Runtime.InteropServices;
 using System.Security.Policy;
+using System.Speech.Synthesis;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -45,6 +46,7 @@ namespace roguishpanda.AB_Bauble_Farm
         public string Description { get; set; }
         public DateTime? StartTime { get; set; }
         public bool IsActive { get; set; }
+        public bool TTSTriggered { get; set; }
     }
     public class StaticLogData
     {
@@ -58,6 +60,8 @@ namespace roguishpanda.AB_Bauble_Farm
         public string Description { get; set; }
         public double Minutes { get; set; }
         public double Seconds { get; set; }
+        public string TTSText { get; set; }
+        public bool TTSActive { get; set; }
         public List<NotesData> WaypointData { get; set; }
         public List<NotesData> NotesData { get; set; }
     }
@@ -130,7 +134,8 @@ namespace roguishpanda.AB_Bauble_Farm
         public StandardButton[] _resetButtons;
         public Dropdown[] _customDropdownTimers;
         public DateTime?[] _timerStartTimes; // Nullable to track if timer is started
-        public bool[] _timerRunning; // Track running state
+        public bool[] _timerRunning; // Track Timer running state
+        public bool[] _timerTTSTriggered; // Track TTS running state
         public TimeSpan[] _timerDurationDefaults;
         public List<List<string>> _staticWaypoints;
         public bool[] _staticRunning;
@@ -190,6 +195,8 @@ namespace roguishpanda.AB_Bauble_Farm
         public SettingEntry<string> _PackageSettingEntry;
         private Dictionary<TimerColors, Color> _colorMap;
         public string _CurrentPackage;
+        private SettingEntry<int> _timerTTSVolumeDefault;
+        private SettingEntry<int> _timerTTSSpeedDefault;
         public readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
         { 
             WriteIndented = true // Makes JSON human-readable
@@ -219,6 +226,12 @@ namespace roguishpanda.AB_Bauble_Farm
             _OpacityDefault = _MainSettingsCollection.DefineSetting("OpacityDefault", 1.0f, () => "Window Opacity", () => "Changing the opacity will adjust how translucent the windows are.");
             _OpacityDefault.SetRange(0.1f, 1.0f);
             _OpacityDefault.SettingChanged += ChangeOpacity_Activated;
+
+            _timerTTSVolumeDefault = _MainSettingsCollection.DefineSetting("TTSVolumeDefaultTimer", 50, () => "TTS Volume", () => "This controls the TTS volume.");
+            _timerTTSVolumeDefault.SetRange(0, 100);
+
+            _timerTTSSpeedDefault = _MainSettingsCollection.DefineSetting("TTSSpeedDefaultTimer", 0, () => "TTS Speed", () => "This controls the TTS speaker's speed.");
+            _timerTTSSpeedDefault.SetRange(-10, 10);
 
             _toggleTimerWindowKeybind = _MainSettingsCollection.DefineSetting("TimerKeybinding",new KeyBinding(ModifierKeys.Shift, Microsoft.Xna.Framework.Input.Keys.L),() => "Timer Window",() => "Keybind to show or hide the Timer window.");
             _toggleTimerWindowKeybind.Value.BlockSequenceFromGw2 = true;
@@ -996,6 +1009,7 @@ namespace roguishpanda.AB_Bauble_Farm
             string DropdownValue = _customDropdownTimers[timerIndex].SelectedItem;
             _timerStartTimes[timerIndex] = DateTime.Now;
             _timerRunning[timerIndex] = true;
+            _timerTTSTriggered[timerIndex] = true;
             if (_DisableStartDefault.Value == true)
             {
                 _resetButtons[timerIndex].Enabled = false;
@@ -1025,6 +1039,7 @@ namespace roguishpanda.AB_Bauble_Farm
                     _timerLabels[timerIndex].Text = $"{_timerDurationOverride[timerIndex]:mm\\:ss}";
                 }
                 _timerRunning[timerIndex] = false;
+                _timerTTSTriggered[timerIndex] = false;
                 //_timerLabels[timerIndex].TextColor = Color.GreenYellow;
                 TimerColors selectedEnum = _TimerColorDefault.Value;
                 Color actualColor = _colorMap[selectedEnum];
@@ -1051,6 +1066,7 @@ namespace roguishpanda.AB_Bauble_Farm
                         _timerLabels[timerIndex].Text = $"{_timerDurationOverride[timerIndex]:mm\\:ss}";
                     }
                     _timerRunning[timerIndex] = false;
+                    _timerTTSTriggered[timerIndex] = false;
                     //_timerLabels[timerIndex].TextColor = Color.GreenYellow;
                     TimerColors selectedEnum = _TimerColorDefault.Value;
                     Color actualColor = _colorMap[selectedEnum];
@@ -1096,7 +1112,8 @@ namespace roguishpanda.AB_Bauble_Farm
                     ID = i,
                     Description = $"{_timerLabelDescriptions[i].Text}",
                     StartTime = startTime,
-                    IsActive = _timerRunning[i]
+                    IsActive = _timerRunning[i],
+                    TTSTriggered = _timerTTSTriggered[i]
                 });
             }
             try
@@ -1184,6 +1201,7 @@ namespace roguishpanda.AB_Bauble_Farm
                 // Initialize timer UI variables
                 _timerStartTimes = new DateTime?[TimerRowNum];
                 _timerRunning = new bool[TimerRowNum];
+                _timerTTSTriggered = new bool[TimerRowNum];
                 _timerLabelDescriptions = new Blish_HUD.Controls.Label[TimerRowNum];
                 _timerNotesIcon = new Image[TimerRowNum];
                 _timerWaypointIcon = new Image[TimerRowNum];
@@ -1234,6 +1252,7 @@ namespace roguishpanda.AB_Bauble_Farm
                 _timerLabels[i] = new Blish_HUD.Controls.Label();
                 _timerStartTimes[i] = null; // Not started
                 _timerRunning[i] = false;
+                _timerTTSTriggered[i] = false;
             }
             LoadTimerDefaults(TimerRowNum);
 
@@ -1937,6 +1956,7 @@ namespace roguishpanda.AB_Bauble_Farm
                             {
                                 _timerStartTimes[i] = eventData[i].StartTime;
                                 _timerRunning[i] = eventData[i].IsActive;
+                                _timerTTSTriggered[i] = eventData[i].TTSTriggered;
                                 _resetButtons[i].Enabled = false;
                                 _customDropdownTimers[i].Enabled = false;
                             }
@@ -1944,6 +1964,7 @@ namespace roguishpanda.AB_Bauble_Farm
                             {
                                 _timerStartTimes[i] = null;
                                 _timerRunning[i] = false;
+                                _timerTTSTriggered[i] = false;
                             }
                         }
                     }
@@ -2168,6 +2189,14 @@ namespace roguishpanda.AB_Bauble_Farm
                     {
                         _timerLabels[i].Text = "-" + _timerLabels[i].Text;
                     }
+
+                    if (remaining.TotalSeconds <= 0 && _timerTTSTriggered[i])
+                    {
+                        TTSAlert(i);
+                        _timerTTSTriggered[i] = false;
+
+                        UpdateTimerJsonEvents();
+                    }
                 }
                 if (_timerRunning[i] == false)
                 {
@@ -2211,6 +2240,21 @@ namespace roguishpanda.AB_Bauble_Farm
 
             #endregion
         }
+
+        private void TTSAlert(int index)
+        {
+            string TTSText = _timerEvents[index].TTSText;
+            bool TTSActive = _timerEvents[index].TTSActive;
+            if (TTSActive == true || TTSText != "")
+            {
+                SpeechSynthesizer _speechSynthesizer;
+                _speechSynthesizer = new SpeechSynthesizer();
+                _speechSynthesizer.Rate = _timerTTSSpeedDefault.Value;     // Speed: -10 (slow) to 10 (fast)
+                _speechSynthesizer.Volume = _timerTTSVolumeDefault.Value; // Volume: 0 to 100
+                _speechSynthesizer.SpeakAsync(TTSText);
+            }
+        }
+
         private void OrderPanelsByTime(TimeSpan[] CurrentElapsedTime)
         {
             var sortedWithIndices = CurrentElapsedTime

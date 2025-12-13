@@ -20,9 +20,13 @@ namespace roguishpanda.AB_Bauble_Farm
         private Label _LowTimerLabelDisplay;
         private Label _IntermediateLowTimerLabelDisplay;
         private Label _OpacityLabelDisplay;
+        private Label _TTSVolumeLabelDisplay;
+        private Label _TTSSpeedLabelDisplay;
         private SettingEntry<int> _LowTimerSettingEntry;
         private SettingEntry<int> _IntermediateLowTimerSettingEntry;
         private SettingEntry<float> _OpacityDefaultSettingEntry;
+        private SettingEntry<int> _TTSVolumeSettingEntry;
+        private SettingEntry<int> _TTSSpeedSettingEntry;
         private SettingCollection _Settings;
 
         protected override void Build(Container buildPanel)
@@ -44,7 +48,7 @@ namespace roguishpanda.AB_Bauble_Farm
                 //ShowBorder = true,
                 Padding = new Thickness(50, 50, 50, 50),
                 Location = new Point(100, 100),
-                Size = new Point(500, 400)
+                Size = new Point(500, 600)
             };
             var settingsView = new SettingsView(SettingsCollection);
             _settingsViewContainer.Show(settingsView);
@@ -67,6 +71,20 @@ namespace roguishpanda.AB_Bauble_Farm
             {
                 Size = new Point(100, 40),
                 Location = new Point(580, 220),
+                Font = GameService.Content.DefaultFont16,
+                Parent = listSettingsPanel
+            };
+            _TTSVolumeLabelDisplay = new Blish_HUD.Controls.Label
+            {
+                Size = new Point(100, 40),
+                Location = new Point(580, 245),
+                Font = GameService.Content.DefaultFont16,
+                Parent = listSettingsPanel
+            };
+            _TTSSpeedLabelDisplay = new Blish_HUD.Controls.Label
+            {
+                Size = new Point(100, 40),
+                Location = new Point(580, 270),
                 Font = GameService.Content.DefaultFont16,
                 Parent = listSettingsPanel
             };
@@ -96,6 +114,20 @@ namespace roguishpanda.AB_Bauble_Farm
                     _OpacityDefaultSettingEntry.SettingChanged += OpacityDefaultSettingEntry_SettingChanged;
                     _OpacityLabelDisplay.Text = Math.Round(_OpacityDefaultSettingEntry.Value * 100, 0) + "%";
                 }
+                _TTSVolumeSettingEntry = null;
+                TimerCollector.TryGetSetting("TTSVolumeDefaultTimer", out _TTSVolumeSettingEntry);
+                if (_TTSVolumeSettingEntry != null)
+                {
+                    _TTSVolumeSettingEntry.SettingChanged += TTSVolumeDefaultSettingEntry_SettingChanged;
+                    _TTSVolumeLabelDisplay.Text = _TTSVolumeSettingEntry.Value.ToString() + "%";
+                }
+                _TTSSpeedSettingEntry = null;
+                TimerCollector.TryGetSetting("TTSSpeedDefaultTimer", out _TTSSpeedSettingEntry);
+                if (_TTSSpeedSettingEntry != null)
+                {
+                    _TTSSpeedSettingEntry.SettingChanged += TTSSpeedDefaultSettingEntry_SettingChanged;
+                    _TTSSpeedLabelDisplay.Text = _TTSSpeedSettingEntry.Value.ToString();
+                }
             }
 
             AsyncTexture2D TitleTexture = AsyncTexture2D.FromAssetId(1234872);
@@ -116,6 +148,17 @@ namespace roguishpanda.AB_Bauble_Farm
                 Parent = _timerEventsTitlePanel
             };
         }
+
+        private void TTSVolumeDefaultSettingEntry_SettingChanged(object sender, ValueChangedEventArgs<int> e)
+        {
+            _TTSVolumeLabelDisplay.Text = _TTSVolumeSettingEntry.Value.ToString() + "%";
+        }
+
+        private void TTSSpeedDefaultSettingEntry_SettingChanged(object sender, ValueChangedEventArgs<int> e)
+        {
+            _TTSSpeedLabelDisplay.Text = _TTSSpeedSettingEntry.Value.ToString();
+        }
+
         private void OpacityDefaultSettingEntry_SettingChanged(object sender, ValueChangedEventArgs<float> e)
         {
             _OpacityLabelDisplay.Text = Math.Round(_OpacityDefaultSettingEntry.Value * 100, 0) + "%";

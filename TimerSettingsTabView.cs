@@ -1,4 +1,14 @@
-﻿using Blish_HUD;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Runtime;
+using System.Speech.Synthesis;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
+using Blish_HUD;
 using Blish_HUD.Common.Gw2;
 using Blish_HUD.Content;
 using Blish_HUD.Controls;
@@ -10,15 +20,7 @@ using Blish_HUD.Settings.UI.Views;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Runtime;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace roguishpanda.AB_Bauble_Farm
 {
@@ -40,10 +42,10 @@ namespace roguishpanda.AB_Bauble_Farm
         private Label _CurrentEventLabel;
         private Panel _timerEventsTitlePanel;
         private Label _timerEventsTitleLabel;
-        private Image[] _cancelButton;
-        private Image[] _upArrowButton;
-        private Image[] _downArrowButton;
-        private Image[] _broadcastImage;
+        private Blish_HUD.Controls.Image[] _cancelButton;
+        private Blish_HUD.Controls.Image[] _upArrowButton;
+        private Blish_HUD.Controls.Image[] _downArrowButton;
+        private Blish_HUD.Controls.Image[] _broadcastImage;
         private Checkbox[] _broadcastCheckbox;
         private AsyncTexture2D _cancelTexture;
         private AsyncTexture2D _addTexture;
@@ -66,6 +68,13 @@ namespace roguishpanda.AB_Bauble_Farm
         private TextBox[] _WaypointsTextbox;
         private Label[] _NotesLabel;
         private MultilineTextBox[] _NotesTextbox;
+        private Label _TTSLabel;
+        private TextBox _TTSTextbox;
+        private Checkbox _TTSCheckbox;
+        private StandardButton _TTSTest;
+        private SettingCollection _Settings;
+        private SettingEntry<int> _TTSVolumeSettingEntry;
+        private SettingEntry<int> _TTSSpeedSettingEntry;
         public readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
         {
             WriteIndented = true // Makes JSON human-readable
@@ -117,7 +126,7 @@ namespace roguishpanda.AB_Bauble_Farm
                 //Visible = false,
                 Parent = _timerSettingsPanel
             };
-            Image buttonCreateEvent = new Image
+            Blish_HUD.Controls.Image buttonCreateEvent = new Blish_HUD.Controls.Image
             {
                 Texture = _addTexture,
                 Size = new Point(32, 32),
@@ -192,9 +201,9 @@ namespace roguishpanda.AB_Bauble_Farm
 
             _timerEventsPanels = new Panel[TimerRowNum];
             _timerEventTextbox = new TextBox[TimerRowNum];
-            _cancelButton = new Image[TimerRowNum];
-            _upArrowButton = new Image[TimerRowNum];
-            _downArrowButton = new Image[TimerRowNum];
+            _cancelButton = new Blish_HUD.Controls.Image[TimerRowNum];
+            _upArrowButton = new Blish_HUD.Controls.Image[TimerRowNum];
+            _downArrowButton = new Blish_HUD.Controls.Image[TimerRowNum];
             LoadEventTable(TimerRowNum);
             if (TimerRowNum != 0)
             {
@@ -267,6 +276,8 @@ namespace roguishpanda.AB_Bauble_Farm
                     Description = _textNewEvent.Text,
                     Minutes = 8,
                     Seconds = 30,
+                    TTSText = "",
+                    TTSActive = false,
                     WaypointData = new List<NotesData>
                     {
                         new NotesData { Type = "", Notes = "", Broadcast = false }
@@ -300,9 +311,9 @@ namespace roguishpanda.AB_Bauble_Farm
                 TimerRowNum = _eventNotes.Count();
                 _timerEventsPanels = new Panel[TimerRowNum];
                 _timerEventTextbox = new TextBox[TimerRowNum];
-                _cancelButton = new Image[TimerRowNum];
-                _upArrowButton = new Image[TimerRowNum];
-                _downArrowButton = new Image[TimerRowNum];
+                _cancelButton = new Blish_HUD.Controls.Image[TimerRowNum];
+                _upArrowButton = new Blish_HUD.Controls.Image[TimerRowNum];
+                _downArrowButton = new Blish_HUD.Controls.Image[TimerRowNum];
                 LoadEventTable(TimerRowNum);
                 TimerSettings_Click(_timerEventsPanels[TimerRowNum - 1], null);
                 //CreateEventJson();
@@ -376,6 +387,8 @@ namespace roguishpanda.AB_Bauble_Farm
                     Description = note.Description,
                     Minutes = note.Minutes,
                     Seconds = note.Seconds,
+                    TTSText = note.TTSText,
+                    TTSActive = note.TTSActive,
                     WaypointData = note.WaypointData,
                     NotesData = note.NotesData
                 }).ToList();
@@ -420,9 +433,9 @@ namespace roguishpanda.AB_Bauble_Farm
                 TimerRowNum = _eventNotes.Count();
                 _timerEventsPanels = new Panel[TimerRowNum];
                 _timerEventTextbox = new TextBox[TimerRowNum];
-                _cancelButton = new Image[TimerRowNum];
-                _upArrowButton = new Image[TimerRowNum];
-                _downArrowButton = new Image[TimerRowNum];
+                _cancelButton = new Blish_HUD.Controls.Image[TimerRowNum];
+                _upArrowButton = new Blish_HUD.Controls.Image[TimerRowNum];
+                _downArrowButton = new Blish_HUD.Controls.Image[TimerRowNum];
                 LoadEventTable(TimerRowNum);
                 TimerSettings_Click(_timerEventsPanels[0], null);
                 _buttonSaveEvents.Visible = true;
@@ -468,9 +481,9 @@ namespace roguishpanda.AB_Bauble_Farm
                 TimerRowNum = _eventNotes.Count();
                 _timerEventsPanels = new Panel[TimerRowNum];
                 _timerEventTextbox = new TextBox[TimerRowNum];
-                _cancelButton = new Image[TimerRowNum];
-                _upArrowButton = new Image[TimerRowNum];
-                _downArrowButton = new Image[TimerRowNum];
+                _cancelButton = new Blish_HUD.Controls.Image[TimerRowNum];
+                _upArrowButton = new Blish_HUD.Controls.Image[TimerRowNum];
+                _downArrowButton = new Blish_HUD.Controls.Image[TimerRowNum];
                 LoadEventTable(TimerRowNum);
                 TimerSettings_Click(_timerEventsPanels[Index + Direction], null);
                 _buttonSaveEvents.Visible = true;
@@ -508,9 +521,9 @@ namespace roguishpanda.AB_Bauble_Farm
                 TimerRowNum = _eventNotes.Count();
                 _timerEventsPanels = new Panel[TimerRowNum];
                 _timerEventTextbox = new TextBox[TimerRowNum];
-                _cancelButton = new Image[TimerRowNum];
-                _upArrowButton = new Image[TimerRowNum];
-                _downArrowButton = new Image[TimerRowNum];
+                _cancelButton = new Blish_HUD.Controls.Image[TimerRowNum];
+                _upArrowButton = new Blish_HUD.Controls.Image[TimerRowNum];
+                _downArrowButton = new Blish_HUD.Controls.Image[TimerRowNum];
                 LoadEventTable(TimerRowNum);
                 TimerSettings_Click(_timerEventsPanels[0], null);
                 _buttonSaveEvents.Visible = false;
@@ -565,7 +578,7 @@ namespace roguishpanda.AB_Bauble_Farm
                     };
                     _timerEventTextbox[i].TextChanged += (s, e) => CurrentEvent_TextChanged(Index);
 
-                    _cancelButton[i] = new Image
+                    _cancelButton[i] = new Blish_HUD.Controls.Image
                     {
                         Texture = _cancelTexture,
                         Size = new Point(16, 16),
@@ -574,7 +587,7 @@ namespace roguishpanda.AB_Bauble_Farm
                         Parent = _timerEventsPanels[i]
                     };
                     _cancelButton[i].Click += (s, e) => CancelEvent_Click(Index);
-                    _upArrowButton[i] = new Image
+                    _upArrowButton[i] = new Blish_HUD.Controls.Image
                     {
                         Texture = _upArrowTexture,
                         Size = new Point(20, 20),
@@ -583,7 +596,7 @@ namespace roguishpanda.AB_Bauble_Farm
                         Parent = _timerEventsPanels[i]
                     };
                     _upArrowButton[i].Click += (s, e) => MoveEvent_Click(Index, -1);
-                    _downArrowButton[i] = new Image
+                    _downArrowButton[i] = new Blish_HUD.Controls.Image
                     {
                         Texture = _downArrowTexture,
                         Size = new Point(20, 20),
@@ -670,7 +683,7 @@ namespace roguishpanda.AB_Bauble_Farm
                 _WaypointsTextbox = new TextBox[1];
                 _NotesLabel = new Label[4];
                 _NotesTextbox = new MultilineTextBox[4];
-                _broadcastImage = new Image[4];
+                _broadcastImage = new Blish_HUD.Controls.Image[4];
                 _broadcastCheckbox = new Checkbox[4];
                 int currentControlCount = 0;
                 for (int y = 0; y < 1; y++)
@@ -716,7 +729,7 @@ namespace roguishpanda.AB_Bauble_Farm
                         Font = GameService.Content.DefaultFont16,
                         Parent = _SettingsControlPanel
                     };
-                    _broadcastImage[z] = new Image
+                    _broadcastImage[z] = new Blish_HUD.Controls.Image
                     {
                         Texture = _broadcastTexture,
                         Size = new Point(32, 32),
@@ -747,6 +760,68 @@ namespace roguishpanda.AB_Bauble_Farm
 
                     currentControlCount++;
                 }
+
+                _TTSLabel = new Blish_HUD.Controls.Label
+                {
+                    Text = "TTS:",
+                    Size = new Point(70, 40),
+                    Location = new Point(0, 500),
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Font = GameService.Content.DefaultFont16,
+                    Parent = _SettingsControlPanel
+                };
+                _TTSTextbox = new Blish_HUD.Controls.TextBox
+                {
+                    Size = new Point(350, 40),
+                    Location = new Point(110, 500),
+                    Font = GameService.Content.DefaultFont16,
+                    Parent = _SettingsControlPanel
+                };
+                _TTSCheckbox = new Checkbox
+                {
+                    Size = new Point(32, 32),
+                    Location = new Point(80, 504),
+                    Checked = eventNotes[senderIndex].TTSActive,
+                    Parent = _SettingsControlPanel
+                };
+                if (eventNotes[senderIndex].TTSText != null)
+                {
+                    _TTSTextbox.Text = eventNotes[senderIndex].TTSText.ToString();
+                }
+                _TTSTextbox.TextChanged += _TTSTextbox_TextChanged;
+                _TTSCheckbox.CheckedChanged += _TTSCheckbox_CheckedChanged;
+                _TTSTest = new StandardButton
+                {
+                    Text = "Test",
+                    Size = new Point(60, 40),
+                    Location = new Point(470, 500),
+                    Visible = true,
+                    Parent = _SettingsControlPanel
+                };
+                _Settings = _BaubleFarmModule._settings;
+                SettingCollection MainSettings = _Settings.AddSubCollection("MainSettings");
+                _TTSSpeedSettingEntry = null;
+                int TTSSpeed = 0;
+                MainSettings.TryGetSetting("TTSSpeedDefaultTimer", out _TTSSpeedSettingEntry);
+                if (_TTSSpeedSettingEntry != null)
+                {
+                    TTSSpeed = _TTSSpeedSettingEntry.Value;
+                }
+                _TTSVolumeSettingEntry = null;
+                int TTSVolume = 100;
+                MainSettings.TryGetSetting("TTSVolumeDefaultTimer", out _TTSVolumeSettingEntry);
+                if (_TTSVolumeSettingEntry != null)
+                {
+                    TTSVolume = _TTSVolumeSettingEntry.Value;
+                }
+                _TTSTest.Click += (s2, e2) =>
+                {
+                    SpeechSynthesizer _speechSynthesizer;
+                    _speechSynthesizer = new SpeechSynthesizer();
+                    _speechSynthesizer.Rate = TTSSpeed;     // Speed: -10 (slow) to 10 (fast)
+                    _speechSynthesizer.Volume = TTSVolume; // Volume: 0 to 100
+                    _speechSynthesizer.SpeakAsync(_TTSTextbox.Text.ToString());
+                };
 
                 //// Re-color panels
                 for (int i = 0; i < TimerRowNum; i++)
@@ -785,6 +860,19 @@ namespace roguishpanda.AB_Bauble_Farm
                 Logger.Warn($"Failed to load event details when clicking event panel: {ex.Message}");
             }
         }
+
+        private void _TTSCheckbox_CheckedChanged(object sender, CheckChangedEvent e)
+        {
+            _eventNotes[_CurrentEventSelected].TTSActive = _TTSCheckbox.Checked;
+            _buttonSaveEvents.Visible = true;
+        }
+
+        private void _TTSTextbox_TextChanged(object sender, EventArgs e)
+        {
+            _eventNotes[_CurrentEventSelected].TTSText = _TTSTextbox.Text.ToString();
+            _buttonSaveEvents.Visible = true;
+        }
+
         private void _WaypointsTextbox_TextChanged(object sender, EventArgs e)
         {
             int senderIndex = Array.IndexOf(_WaypointsTextbox, sender);
