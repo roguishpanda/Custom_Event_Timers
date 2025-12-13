@@ -1,6 +1,24 @@
-﻿using Blish_HUD;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.Composition;
+using System.Diagnostics;
+using System.IO;
+using System.IO.Ports;
+using System.Linq;
+using System.Reflection;
+using System.Runtime;
+using System.Runtime.InteropServices;
+using System.Security.Policy;
+using System.Text;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using Blish_HUD;
 using Blish_HUD.Content;
 using Blish_HUD.Controls;
+using Blish_HUD.GameServices.ArcDps.Models.UnofficialExtras;
 using Blish_HUD.GameServices.ArcDps.V2.Models;
 using Blish_HUD.Graphics.UI;
 using Blish_HUD.Input;
@@ -10,22 +28,8 @@ using Blish_HUD.Settings;
 using Blish_HUD.Settings.UI.Views;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended;
 using SharpDX.MediaFoundation;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using System.Diagnostics;
-using System.IO;
-using System.IO.Ports;
-using System.Linq;
-using System.Reflection;
-using System.Runtime;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace roguishpanda.AB_Bauble_Farm
 {
@@ -70,6 +74,30 @@ namespace roguishpanda.AB_Bauble_Farm
         public string Type { get; set; }
         public string Notes { get; set; }
         public bool Broadcast { get; set; }
+    }
+    public enum TargetChats
+    {
+        [Description("None")]
+        None,
+        [Description("Squad")]
+        Squad,
+        [Description("Party")]
+        Party,
+        [Description("Guild")]
+        Guild,
+        [Description("Map")]
+        Map,
+        [Description("Say")]
+        Say
+    }
+    public enum TimerColors
+    {
+        Red,
+        Orange,
+        Green,
+        Blue,
+        Yellow,
+        White
     }
 
     [Export(typeof(Blish_HUD.Modules.Module))]
@@ -134,8 +162,14 @@ namespace roguishpanda.AB_Bauble_Farm
         public SettingCollection _PackageSettingsCollection;
         public SettingEntry<bool> _InOrdercheckboxDefault;
         public SettingEntry<bool> _hideStaticEventsDefault;
+        private SettingEntry<bool> _DisableStartDefault;
         public SettingEntry<float> _OpacityDefault;
         public SettingEntry<int> _timerLowDefault;
+        private SettingEntry<int> _timerIntermediateLowDefault;
+        private SettingEntry<TargetChats> _TargetChatDefault;
+        private SettingEntry<TimerColors> _TimerColorDefault;
+        private SettingEntry<TimerColors> _LowTimerColorDefault;
+        private SettingEntry<TimerColors> _IntermediateLowTimerColorDefault;
         public AsyncTexture2D _asyncTimertexture;
         public AsyncTexture2D _asyncGeneralSettingstexture;
         public AsyncTexture2D _asyncNotesSettingstexture;
@@ -154,6 +188,7 @@ namespace roguishpanda.AB_Bauble_Farm
         public Checkbox _hideStaticEventsCheckbox;
         public StandardButton _resetStaticEventsButton;
         public SettingEntry<string> _PackageSettingEntry;
+        private Dictionary<TimerColors, Color> _colorMap;
         public string _CurrentPackage;
         public readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
         { 
@@ -173,9 +208,13 @@ namespace roguishpanda.AB_Bauble_Farm
 
             _InOrdercheckboxDefault = _MainSettingsCollection.DefineSetting("InOrdercheckboxDefault", false, () => "Order by Timer", () => "Check this box if you want to order your timers by time.");
             _hideStaticEventsDefault = _MainSettingsCollection.DefineSetting("hideStaticEventsDefault", false, () => "Hide Static Events", () => "Check this box to hide static events that are completed.");
+            _DisableStartDefault = _MainSettingsCollection.DefineSetting("_DisableStartDefault", false, () => "Disable Start Button When Pressed", () => "Check this box to change Start button into Resart button.");
 
-            _timerLowDefault = _MainSettingsCollection.DefineSetting("LowTimerDefaultTimer", 30, () => "Low Timer", () => "Set timer for when timer gets below certain threshold in seconds.");
+            _timerLowDefault = _MainSettingsCollection.DefineSetting("LowTimerDefaultTimer", 30, () => "Low Timer", () => "This timer setting (in seconds) will trigger when the low timer value is lower than the current timer value.");
             _timerLowDefault.SetRange(1, 120);
+
+            _timerIntermediateLowDefault = _MainSettingsCollection.DefineSetting("IntermediateLowTimerDefaultTimer", 60, () => "Intermediate Timer", () => "This timer setting (in seconds) will trigger when the low and intermediate combined values are lower than the current timer value.");
+            _timerIntermediateLowDefault.SetRange(1, 120);
 
             _OpacityDefault = _MainSettingsCollection.DefineSetting("OpacityDefault", 1.0f, () => "Window Opacity", () => "Changing the opacity will adjust how translucent the windows are.");
             _OpacityDefault.SetRange(0.1f, 1.0f);
@@ -201,12 +240,40 @@ namespace roguishpanda.AB_Bauble_Farm
             _cancelNotesKeybind.Value.Enabled = true;
             _cancelNotesKeybind.Value.BindingChanged += CancelNotes_BindingChanged;
 
+            _TargetChatDefault = _MainSettingsCollection.DefineSetting("TargetChatDefault", TargetChats.None, () => "Target Chat", () => "Pick the default chat shorts targeted chat.");
+
+            _TimerColorDefault = _MainSettingsCollection.DefineSetting("TimerColorDefault", TimerColors.Green, () => "Timer Color", () => "Pick the color for the timer.");
+            _TimerColorDefault.SettingChanged += _TimerColorDefault_SettingChanged;
+
+            _LowTimerColorDefault = _MainSettingsCollection.DefineSetting("LowTimerColorDefault", TimerColors.Red, () => "Low Timer Color", () => "Pick the color for the low timer.");
+
+            _IntermediateLowTimerColorDefault = _MainSettingsCollection.DefineSetting("IntermediateLowTimerColorDefault", TimerColors.Orange, () => "Intermediate Timer Color", () => "Pick the color for the intermediate timer.");
+
+            _colorMap = new Dictionary<TimerColors, Color>
+            {
+                { TimerColors.Red, Color.Red },
+                { TimerColors.Green, Color.GreenYellow },
+                { TimerColors.Orange, Color.Orange },
+                { TimerColors.Blue, Color.LightBlue },
+                { TimerColors.Yellow, Color.Yellow },
+                { TimerColors.White, Color.White }
+            };
+
             _CurrentPackageSelection = _PackageSettingsCollection.DefineSetting("CurrentPackageSelection", "Default", () => "Current Package", () => "This is the current package selection");
 
             _settings = settings;
         }
         public override IView GetSettingsView() => new ModuleSettingsView();
 
+        private void _TimerColorDefault_SettingChanged(object sender, ValueChangedEventArgs<TimerColors> e)
+        {
+            for (int timerIndex = 0; timerIndex < TimerRowNum; timerIndex++)
+            {
+                TimerColors selectedEnum = _TimerColorDefault.Value;
+                Color actualColor = _colorMap[selectedEnum];
+                _timerLabels[timerIndex].TextColor = actualColor;
+            }
+        }
         private void CancelNotes_BindingChanged(object sender, EventArgs e)
         {
             if (_cancelNotesKeybind.Value.PrimaryKey == Microsoft.Xna.Framework.Input.Keys.None)
@@ -637,7 +704,34 @@ namespace roguishpanda.AB_Bauble_Farm
             }
             Thread.Sleep(100);
             // Copy "hello" to clipboard
-            CopyToClipboard(notesData.Notes);
+            string TargetChat = _TargetChatDefault.Value.ToString();
+            if (TargetChat != "None")
+            {
+                string chatPrefix = "";
+                switch (TargetChat)
+                {
+                    case "Squad":
+                        chatPrefix = "/d ";
+                        break;
+                    case "Party":
+                        chatPrefix = "/p ";
+                        break;
+                    case "Guild":
+                        chatPrefix = "/g ";
+                        break;
+                    case "Map":
+                        chatPrefix = "/m ";
+                        break;
+                    case "Say":
+                        chatPrefix = "/s ";
+                        break;
+                }
+                CopyToClipboard(chatPrefix + notesData.Notes);
+            }
+            else
+            {
+                CopyToClipboard(notesData.Notes);
+            }
             Thread.Sleep(100);
             // Simulate Ctrl+V to paste
             SendCtrlV();
@@ -902,8 +996,11 @@ namespace roguishpanda.AB_Bauble_Farm
             string DropdownValue = _customDropdownTimers[timerIndex].SelectedItem;
             _timerStartTimes[timerIndex] = DateTime.Now;
             _timerRunning[timerIndex] = true;
-            _resetButtons[timerIndex].Enabled = false;
-            _customDropdownTimers[timerIndex].Enabled = false;
+            if (_DisableStartDefault.Value == true)
+            {
+                _resetButtons[timerIndex].Enabled = false;
+                _customDropdownTimers[timerIndex].Enabled = false;
+            }
             if (DropdownValue != "Default")
             {
                 if (int.TryParse(DropdownValue, out int totalMinutes))
@@ -928,7 +1025,10 @@ namespace roguishpanda.AB_Bauble_Farm
                     _timerLabels[timerIndex].Text = $"{_timerDurationOverride[timerIndex]:mm\\:ss}";
                 }
                 _timerRunning[timerIndex] = false;
-                _timerLabels[timerIndex].TextColor = Color.GreenYellow;
+                //_timerLabels[timerIndex].TextColor = Color.GreenYellow;
+                TimerColors selectedEnum = _TimerColorDefault.Value;
+                Color actualColor = _colorMap[selectedEnum];
+                _timerLabels[timerIndex].TextColor = actualColor; // Color.GreenYellow
                 _resetButtons[timerIndex].Enabled = true;
                 _customDropdownTimers[timerIndex].Enabled = true;
             }
@@ -951,7 +1051,10 @@ namespace roguishpanda.AB_Bauble_Farm
                         _timerLabels[timerIndex].Text = $"{_timerDurationOverride[timerIndex]:mm\\:ss}";
                     }
                     _timerRunning[timerIndex] = false;
-                    _timerLabels[timerIndex].TextColor = Color.GreenYellow;
+                    //_timerLabels[timerIndex].TextColor = Color.GreenYellow;
+                    TimerColors selectedEnum = _TimerColorDefault.Value;
+                    Color actualColor = _colorMap[selectedEnum];
+                    _timerLabels[timerIndex].TextColor = actualColor; // Color.GreenYellow
                     _resetButtons[timerIndex].Enabled = true;
                     _customDropdownTimers[timerIndex].Enabled = true;
                 }
@@ -1521,8 +1624,12 @@ namespace roguishpanda.AB_Bauble_Farm
                     _timerLabels[i].Location = new Point(130, 0);
                     _timerLabels[i].HorizontalAlignment = Blish_HUD.Controls.HorizontalAlignment.Center;
                     _timerLabels[i].Font = GameService.Content.DefaultFont16;
-                    _timerLabels[i].TextColor = Color.GreenYellow;
                     _timerLabels[i].Parent = _TimerWindowsOrdered[i];
+
+                    //_timerLabels[i].TextColor = Color.GreenYellow;
+                    TimerColors selectedEnum = _TimerColorDefault.Value;
+                    Color actualColor = _colorMap[selectedEnum];
+                    _timerLabels[i].TextColor = actualColor; // Color.GreenYellow
 
                     // Reset button
                     _resetButtons[i] = new StandardButton
@@ -2051,7 +2158,10 @@ namespace roguishpanda.AB_Bauble_Farm
                             _timerLabels[i].Text = $"{_timerDurationOverride[i]:mm\\:ss}";
                         }
                         _timerRunning[i] = false;
-                        _timerLabels[i].TextColor = Color.GreenYellow;
+                        //_timerLabels[i].TextColor = Color.GreenYellow;
+                        TimerColors selectedEnum = _TimerColorDefault.Value;
+                        Color actualColor = _colorMap[selectedEnum];
+                        _timerLabels[i].TextColor = actualColor; // Color.GreenYellow
                         _resetButtons[i].Enabled = true;
                     }
                     else if (remaining.TotalSeconds <= 0)
@@ -2075,11 +2185,21 @@ namespace roguishpanda.AB_Bauble_Farm
                     CurrentElapsedTime[i] = remaining;
                     if (remaining.TotalSeconds < _timerLowDefault.Value)
                     {
-                        _timerLabels[i].TextColor = Color.Red;
+                        TimerColors selectedEnum = _LowTimerColorDefault.Value;
+                        Color actualColor = _colorMap[selectedEnum];
+                        _timerLabels[i].TextColor = actualColor; // Color.Red
+                    }
+                    else if (remaining.TotalSeconds < (_timerLowDefault.Value + _timerIntermediateLowDefault.Value))
+                    {
+                        TimerColors selectedEnum = _IntermediateLowTimerColorDefault.Value;
+                        Color actualColor = _colorMap[selectedEnum];
+                        _timerLabels[i].TextColor = actualColor; // Color.Orange
                     }
                     else
                     {
-                        _timerLabels[i].TextColor = Color.GreenYellow;
+                        TimerColors selectedEnum = _TimerColorDefault.Value;
+                        Color actualColor = _colorMap[selectedEnum];
+                        _timerLabels[i].TextColor = actualColor; // Color.GreenYellow
                     }
                 }
             }

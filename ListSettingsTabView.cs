@@ -18,8 +18,10 @@ namespace roguishpanda.AB_Bauble_Farm
         private Panel _timerEventsTitlePanel;
         private Label _timerEventsTitleLabel;
         private Label _LowTimerLabelDisplay;
+        private Label _IntermediateLowTimerLabelDisplay;
         private Label _OpacityLabelDisplay;
         private SettingEntry<int> _LowTimerSettingEntry;
+        private SettingEntry<int> _IntermediateLowTimerSettingEntry;
         private SettingEntry<float> _OpacityDefaultSettingEntry;
         private SettingCollection _Settings;
 
@@ -42,7 +44,7 @@ namespace roguishpanda.AB_Bauble_Farm
                 //ShowBorder = true,
                 Padding = new Thickness(50, 50, 50, 50),
                 Location = new Point(100, 100),
-                Size = new Point(500, 300)
+                Size = new Point(500, 400)
             };
             var settingsView = new SettingsView(SettingsCollection);
             _settingsViewContainer.Show(settingsView);
@@ -50,14 +52,21 @@ namespace roguishpanda.AB_Bauble_Farm
             _LowTimerLabelDisplay = new Blish_HUD.Controls.Label
             {
                 Size = new Point(100, 40),
-                Location = new Point(580, 150),
+                Location = new Point(580, 170),
+                Font = GameService.Content.DefaultFont16,
+                Parent = listSettingsPanel
+            };
+            _IntermediateLowTimerLabelDisplay = new Blish_HUD.Controls.Label
+            {
+                Size = new Point(100, 40),
+                Location = new Point(580, 195),
                 Font = GameService.Content.DefaultFont16,
                 Parent = listSettingsPanel
             };
             _OpacityLabelDisplay = new Blish_HUD.Controls.Label
             {
                 Size = new Point(100, 40),
-                Location = new Point(580, 175),
+                Location = new Point(580, 220),
                 Font = GameService.Content.DefaultFont16,
                 Parent = listSettingsPanel
             };
@@ -72,6 +81,13 @@ namespace roguishpanda.AB_Bauble_Farm
                 {
                     _LowTimerSettingEntry.SettingChanged += LowTimerSettingEntry_SettingChanged;
                     _LowTimerLabelDisplay.Text = _LowTimerSettingEntry.Value.ToString() + " seconds";
+                }
+                _IntermediateLowTimerSettingEntry = null;
+                TimerCollector.TryGetSetting("IntermediateLowTimerDefaultTimer", out _IntermediateLowTimerSettingEntry);
+                if (_IntermediateLowTimerSettingEntry != null)
+                {
+                    _IntermediateLowTimerSettingEntry.SettingChanged += IntermediateLowTimerSettingEntry_SettingChanged;
+                    _IntermediateLowTimerLabelDisplay.Text = _IntermediateLowTimerSettingEntry.Value.ToString() + " seconds";
                 }
                 _OpacityDefaultSettingEntry = null;
                 TimerCollector.TryGetSetting("OpacityDefault", out _OpacityDefaultSettingEntry);
@@ -100,7 +116,6 @@ namespace roguishpanda.AB_Bauble_Farm
                 Parent = _timerEventsTitlePanel
             };
         }
-
         private void OpacityDefaultSettingEntry_SettingChanged(object sender, ValueChangedEventArgs<float> e)
         {
             _OpacityLabelDisplay.Text = Math.Round(_OpacityDefaultSettingEntry.Value * 100, 0) + "%";
@@ -108,6 +123,10 @@ namespace roguishpanda.AB_Bauble_Farm
         private void LowTimerSettingEntry_SettingChanged(object sender, ValueChangedEventArgs<int> e)
         {
             _LowTimerLabelDisplay.Text = _LowTimerSettingEntry.Value.ToString() + " seconds";
+        }
+        private void IntermediateLowTimerSettingEntry_SettingChanged(object sender, ValueChangedEventArgs<int> e)
+        {
+            _IntermediateLowTimerLabelDisplay.Text = _IntermediateLowTimerSettingEntry.Value.ToString() + " seconds";
         }
     }
 }
