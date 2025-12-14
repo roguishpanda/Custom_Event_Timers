@@ -2149,93 +2149,100 @@ namespace roguishpanda.AB_Bauble_Farm
 
             #region Timer Information Updates
 
-            // Update Timer Information
-            TimeSpan[] CurrentElapsedTime = new TimeSpan[TimerRowNum];
-            for (int i = 0; i < TimerRowNum; i++)
+            try
             {
-                string DropdownValue = _customDropdownTimers[i].SelectedItem;
-                TimeSpan remaining = TimeSpan.FromMinutes(0);
-                if (_timerRunning[i] && _timerStartTimes[i].HasValue)
+                // Update Timer Information
+                TimeSpan[] CurrentElapsedTime = new TimeSpan[TimerRowNum];
+                for (int i = 0; i < TimerRowNum; i++)
                 {
-                    var elapsed = DateTime.Now - _timerStartTimes[i].Value;
-                    if (DropdownValue == "Default")
+                    string DropdownValue = _customDropdownTimers[i].SelectedItem;
+                    TimeSpan remaining = TimeSpan.FromMinutes(0);
+                    if (_timerRunning[i] && _timerStartTimes[i].HasValue)
                     {
-                        remaining = _timerDurationDefaults[i] - elapsed;
-                    }
-                    else
-                    {
-                        remaining = _timerDurationOverride[i] - elapsed;
-                    }
-
-                    _timerLabels[i].Text = $"{remaining:mm\\:ss}";
-                    if (remaining.TotalSeconds <= -3600)
-                    {
+                        var elapsed = DateTime.Now - _timerStartTimes[i].Value;
                         if (DropdownValue == "Default")
                         {
-                            _timerLabels[i].Text = $"{_timerDurationDefaults[i]:mm\\:ss}";
+                            remaining = _timerDurationDefaults[i] - elapsed;
                         }
                         else
                         {
-                            _timerLabels[i].Text = $"{_timerDurationOverride[i]:mm\\:ss}";
+                            remaining = _timerDurationOverride[i] - elapsed;
                         }
-                        _timerRunning[i] = false;
-                        //_timerLabels[i].TextColor = Color.GreenYellow;
-                        TimerColors selectedEnum = _TimerColorDefault.Value;
-                        Color actualColor = _colorMap[selectedEnum];
-                        _timerLabels[i].TextColor = actualColor; // Color.GreenYellow
-                        _resetButtons[i].Enabled = true;
-                    }
-                    else if (remaining.TotalSeconds <= 0)
-                    {
-                        _timerLabels[i].Text = "-" + _timerLabels[i].Text;
-                    }
 
-                    if (remaining.TotalSeconds <= 0 && _timerTTSTriggered[i])
-                    {
-                        TTSAlert(i);
-                        _timerTTSTriggered[i] = false;
+                        _timerLabels[i].Text = $"{remaining:mm\\:ss}";
+                        if (remaining.TotalSeconds <= -3600)
+                        {
+                            if (DropdownValue == "Default")
+                            {
+                                _timerLabels[i].Text = $"{_timerDurationDefaults[i]:mm\\:ss}";
+                            }
+                            else
+                            {
+                                _timerLabels[i].Text = $"{_timerDurationOverride[i]:mm\\:ss}";
+                            }
+                            _timerRunning[i] = false;
+                            //_timerLabels[i].TextColor = Color.GreenYellow;
+                            TimerColors selectedEnum = _TimerColorDefault.Value;
+                            Color actualColor = _colorMap[selectedEnum];
+                            _timerLabels[i].TextColor = actualColor; // Color.GreenYellow
+                            _resetButtons[i].Enabled = true;
+                        }
+                        else if (remaining.TotalSeconds <= 0)
+                        {
+                            _timerLabels[i].Text = "-" + _timerLabels[i].Text;
+                        }
 
-                        UpdateTimerJsonEvents();
+                        if (remaining.TotalSeconds <= 0 && _timerTTSTriggered[i])
+                        {
+                            TTSAlert(i);
+                            _timerTTSTriggered[i] = false;
+
+                            UpdateTimerJsonEvents();
+                        }
                     }
-                }
-                if (_timerRunning[i] == false)
-                {
-                    if (DropdownValue == "Default")
+                    if (_timerRunning[i] == false)
                     {
-                        CurrentElapsedTime[i] = _timerDurationDefaults[i];
+                        if (DropdownValue == "Default")
+                        {
+                            CurrentElapsedTime[i] = _timerDurationDefaults[i];
+                        }
+                        else
+                        {
+                            CurrentElapsedTime[i] = _timerDurationOverride[i];
+                        }
                     }
                     else
                     {
-                        CurrentElapsedTime[i] = _timerDurationOverride[i];
+                        CurrentElapsedTime[i] = remaining;
+                        if (remaining.TotalSeconds < _timerLowDefault.Value)
+                        {
+                            TimerColors selectedEnum = _LowTimerColorDefault.Value;
+                            Color actualColor = _colorMap[selectedEnum];
+                            _timerLabels[i].TextColor = actualColor; // Color.Red
+                        }
+                        else if (remaining.TotalSeconds < (_timerLowDefault.Value + _timerIntermediateLowDefault.Value))
+                        {
+                            TimerColors selectedEnum = _IntermediateLowTimerColorDefault.Value;
+                            Color actualColor = _colorMap[selectedEnum];
+                            _timerLabels[i].TextColor = actualColor; // Color.Orange
+                        }
+                        else
+                        {
+                            TimerColors selectedEnum = _TimerColorDefault.Value;
+                            Color actualColor = _colorMap[selectedEnum];
+                            _timerLabels[i].TextColor = actualColor; // Color.GreenYellow
+                        }
                     }
                 }
-                else
+                if (_InOrdercheckbox.Checked == true)
                 {
-                    CurrentElapsedTime[i] = remaining;
-                    if (remaining.TotalSeconds < _timerLowDefault.Value)
-                    {
-                        TimerColors selectedEnum = _LowTimerColorDefault.Value;
-                        Color actualColor = _colorMap[selectedEnum];
-                        _timerLabels[i].TextColor = actualColor; // Color.Red
-                    }
-                    else if (remaining.TotalSeconds < (_timerLowDefault.Value + _timerIntermediateLowDefault.Value))
-                    {
-                        TimerColors selectedEnum = _IntermediateLowTimerColorDefault.Value;
-                        Color actualColor = _colorMap[selectedEnum];
-                        _timerLabels[i].TextColor = actualColor; // Color.Orange
-                    }
-                    else
-                    {
-                        TimerColors selectedEnum = _TimerColorDefault.Value;
-                        Color actualColor = _colorMap[selectedEnum];
-                        _timerLabels[i].TextColor = actualColor; // Color.GreenYellow
-                    }
+                    OrderPanelsByTime(CurrentElapsedTime);
                 }
             }
-
-            if (_InOrdercheckbox.Checked == true)
+            catch (Exception ex)
             {
-                OrderPanelsByTime(CurrentElapsedTime);
+                //throw ex;
+                Logger.Warn($"Failed GameUpdate timer calculation error: {ex.Message}");
             }
 
             #endregion
@@ -2243,15 +2250,23 @@ namespace roguishpanda.AB_Bauble_Farm
 
         private void TTSAlert(int index)
         {
-            string TTSText = _timerEvents[index].TTSText;
-            bool TTSActive = _timerEvents[index].TTSActive;
-            if (TTSActive == true || TTSText != "")
+            try
             {
-                SpeechSynthesizer _speechSynthesizer;
-                _speechSynthesizer = new SpeechSynthesizer();
-                _speechSynthesizer.Rate = _timerTTSSpeedDefault.Value;     // Speed: -10 (slow) to 10 (fast)
-                _speechSynthesizer.Volume = _timerTTSVolumeDefault.Value; // Volume: 0 to 100
-                _speechSynthesizer.SpeakAsync(TTSText);
+                string TTSText = _timerEvents[index].TTSText;
+                bool TTSActive = _timerEvents[index].TTSActive;
+                if (TTSActive == true && TTSText != "" && TTSText != null)
+                {
+                    SpeechSynthesizer _speechSynthesizer;
+                    _speechSynthesizer = new SpeechSynthesizer();
+                    _speechSynthesizer.Rate = _timerTTSSpeedDefault.Value;     // Speed: -10 (slow) to 10 (fast)
+                    _speechSynthesizer.Volume = _timerTTSVolumeDefault.Value; // Volume: 0 to 100
+                    _speechSynthesizer.SpeakAsync(TTSText);
+                    }
+                }
+            catch (Exception ex)
+            {
+                //throw ex;
+                Logger.Warn($"TTS Failed due to: {ex.Message}");
             }
         }
 
