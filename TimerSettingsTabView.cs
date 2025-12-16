@@ -773,12 +773,14 @@ namespace roguishpanda.AB_Bauble_Farm
                 _TTSTextbox = new Blish_HUD.Controls.TextBox
                 {
                     Size = new Point(350, 40),
+                    BasicTooltipText = "Enter Text-To-Speech value for this event.",
                     Location = new Point(110, 500),
                     Font = GameService.Content.DefaultFont16,
                     Parent = _SettingsControlPanel
                 };
                 _TTSCheckbox = new Checkbox
                 {
+                    BasicTooltipText = "Activate Text-To-Speech value for this event.",
                     Size = new Point(32, 32),
                     Location = new Point(80, 504),
                     Checked = eventNotes[senderIndex].TTSActive,
