@@ -409,7 +409,7 @@ namespace roguishpanda.AB_Bauble_Farm
 
                 TimeSpan Minutes = TimeSpan.FromMinutes(_TimerMinutes[i]);
                 TimeSpan Seconds = TimeSpan.FromSeconds(_TimerSeconds[i]);
-                if (MintuesSettingEntry != null)
+                /*if (MintuesSettingEntry != null)
                 {
                     TimeSpan TempMinutes = TimeSpan.FromMinutes(MintuesSettingEntry.Value);
                     if (TempMinutes != TimeSpan.FromMinutes(0))
@@ -424,7 +424,7 @@ namespace roguishpanda.AB_Bauble_Farm
                     {
                         Seconds = TempSeconds;
                     }
-                }
+                }*/
                 _timerDurationDefaults[i] = Minutes + Seconds;
                 _timerLabels[i].Text = _timerDurationDefaults[i].ToString(@"mm\:ss");
             }
