@@ -243,16 +243,6 @@ namespace roguishpanda.AB_Bauble_Farm
             _toggleStaticWindowKeybind.Value.Enabled = true;
             _toggleStaticWindowKeybind.Value.Activated += ToggleStaticWindowKeybind_Activated;
 
-            _postNotesKeybind = _MainSettingsCollection.DefineSetting("PostNotesKeybinding", new KeyBinding(ModifierKeys.Shift, Microsoft.Xna.Framework.Input.Keys.B), () => "Post Notes", () => "Keybind to confirm posting notes in chat.");
-            _postNotesKeybind.Value.BlockSequenceFromGw2 = true;
-            _postNotesKeybind.Value.Enabled = true;
-            _postNotesKeybind.Value.BindingChanged += PostNotes_BindingChanged;
-
-            _cancelNotesKeybind = _MainSettingsCollection.DefineSetting("CancelNotesKeybinding", new KeyBinding(ModifierKeys.Shift, Microsoft.Xna.Framework.Input.Keys.N), () => "Cancel Notes", () => "Keybind to cancel posting notes in chat.");
-            _cancelNotesKeybind.Value.BlockSequenceFromGw2 = true;
-            _cancelNotesKeybind.Value.Enabled = true;
-            _cancelNotesKeybind.Value.BindingChanged += CancelNotes_BindingChanged;
-
             _TargetChatDefault = _MainSettingsCollection.DefineSetting("TargetChatDefault", TargetChats.None, () => "Target Chat", () => "Pick the default chat shorts targeted chat.");
 
             _TimerColorDefault = _MainSettingsCollection.DefineSetting("TimerColorDefault", TimerColors.Green, () => "Timer Color", () => "Pick the color for the timer.");
@@ -753,7 +743,7 @@ namespace roguishpanda.AB_Bauble_Farm
             SendKey(VK_RETURN);
             Thread.Sleep(100);
         }
-        private async Task NotesIcon_Click(int index, string eventType)
+        private void NotesIcon_Click(int index, string eventType)
         {
             var notesData = new List<NotesData>();
             if (eventType == "Static")
@@ -776,22 +766,12 @@ namespace roguishpanda.AB_Bauble_Farm
                 _timerWaypointIcon[i].Enabled = false;
             }
 
-            ShowInputPanel("Notes");
-            bool wasKeybindPressed = await WaitForKeybindAsync();
-            await WaitForShiftKeyUpAsync();
-            _inputPanel?.Hide();
-            _inputPanel = null;
-            //Thread.Sleep(1000);
-
-            if (wasKeybindPressed)
+            for (int i = 0; i < notesData.Count; i++)
             {
-                for (int i = 0; i < notesData.Count; i++)
+                string message = notesData[i].Notes;
+                if (message != null && message.Length > 0)
                 {
-                    string message = notesData[i].Notes;
-                    if (message != null && message.Length > 0)
-                    {
-                        ClipboardPaste(notesData[i]);
-                    }
+                    ClipboardPaste(notesData[i]);
                 }
             }
 
@@ -1594,16 +1574,7 @@ namespace roguishpanda.AB_Bauble_Farm
                         noteIcon.Size = new Point(32, 32);
                         noteIcon.Opacity = 0.7f;
                     };
-                    _timerNotesIcon[i].Click += async (s, e) => await NotesIcon_Click(index, "Timer");
-
-                    if (_postNotesKeybind.Value.PrimaryKey == Microsoft.Xna.Framework.Input.Keys.None || _cancelNotesKeybind.Value.PrimaryKey == Microsoft.Xna.Framework.Input.Keys.None)
-                    {
-                        _timerNotesIcon[i].Hide();
-                    }
-                    else
-                    {
-                        _timerNotesIcon[i].Show();
-                    }
+                    _timerNotesIcon[i].Click += (s, e) => NotesIcon_Click(index, "Timer");
 
                     bool waypointNote = false;
                     for (int k = 0; k < _timerEvents[i].WaypointData.Count; k++)
@@ -1826,7 +1797,7 @@ namespace roguishpanda.AB_Bauble_Farm
                         noteIcon.Size = new Point(32, 32);
                         noteIcon.Opacity = 0.7f;
                     };
-                    _staticNotesIcon[j].Click += async (s, e) => await NotesIcon_Click(index, "Static");
+                    _staticNotesIcon[j].Click += (s, e) => NotesIcon_Click(index, "Static");
 
                     // Notes Icon
                     _staticCheckboxes[j] = new Checkbox
@@ -1836,15 +1807,6 @@ namespace roguishpanda.AB_Bauble_Farm
                         Parent = _StaticWindowsOrdered[j]
                     };
                     _staticCheckboxes[j].CheckedChanged += (s, e) => _StaticEventsCheckbox_Click(index);
-
-                    if (_postNotesKeybind.Value.PrimaryKey == Microsoft.Xna.Framework.Input.Keys.None || _cancelNotesKeybind.Value.PrimaryKey == Microsoft.Xna.Framework.Input.Keys.None)
-                    {
-                        _staticNotesIcon[j].Hide();
-                    }
-                    else
-                    {
-                        _staticNotesIcon[j].Show();
-                    }
 
                     bool waypointNote = false;
                     for (int k = 0; k < _staticEvents[j].WaypointData.Count; k++)

@@ -7,7 +7,7 @@
   "directories": [ "Shiny_Baubles" ],
   "description": "Can be used to create custom timers and event trackers for gold farms and/or meta events. \n\nAdditional features include: custom packages for timer/events, fast chat shorts for waypoints and notes, community packages, and the ability to copy/import your friend''s packages.",
   "dependencies": {
-    "bh.blishhud": ">=1.2.0"
+    "bh.blishhud": ">=1.3.0"
   },
   "contributors": [
     {
